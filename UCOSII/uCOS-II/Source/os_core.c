@@ -580,15 +580,15 @@ void  OSInit (void)
 #endif
 #endif
 
-    OSInitHookBegin();                                           /* Call port specific initialization code   */
+    OSInitHookBegin();  // 调用用户特定的初始化代码                                           /* Call port specific initialization code   */
 
-    OS_InitMisc();                                               /* Initialize miscellaneous variables       */
+    OS_InitMisc();      // 初始化os要用的全局变量                                               /* Initialize miscellaneous variables       */
 
-    OS_InitRdyList();                                            /* Initialize the Ready List                */
+    OS_InitRdyList();   // 初始化就绪列表                                            /* Initialize the Ready List                */
 
-    OS_InitTCBList();                                            /* Initialize the free list of OS_TCBs      */
+    OS_InitTCBList();   // 初始化OS_TCB空闲列表                                            /* Initialize the free list of OS_TCBs      */
 
-    OS_InitEventList();                                          /* Initialize the free list of OS_EVENTs    */
+    OS_InitEventList(); // 初始化OS_EVENT空闲列表                                          /* Initialize the free list of OS_EVENTs    */
 
 #if (OS_FLAG_EN > 0u) && (OS_MAX_FLAGS > 0u)
     OS_FlagInit();                                               /* Initialize the event flag structures     */
@@ -599,7 +599,7 @@ void  OSInit (void)
 #endif
 
 #if (OS_Q_EN > 0u) && (OS_MAX_QS > 0u)
-    OS_QInit();                                                  /* Initialize the message queue structures  */
+    OS_QInit();     // 初始化消息队列结构                                                  /* Initialize the message queue structures  */
 #endif
 
 #if OS_TASK_CREATE_EXT_EN > 0u
@@ -611,9 +611,9 @@ void  OSInit (void)
 #endif
 #endif
 
-    OS_InitTaskIdle();                                           /* Create the Idle Task                     */
+    OS_InitTaskIdle();  // 创建空闲任务                                           /* Create the Idle Task                     */
 #if OS_TASK_STAT_EN > 0u
-    OS_InitTaskStat();                                           /* Create the Statistic Task                */
+    OS_InitTaskStat();  // 创建统计任务                                           /* Create the Statistic Task                */
 #endif
 
 #if OS_TMR_EN > 0u
@@ -854,7 +854,7 @@ void  OSStart (void)
         OSPrioCur     = OSPrioHighRdy;
         OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy]; /* Point to highest priority task ready to run    */
         OSTCBCur      = OSTCBHighRdy;
-        OSStartHighRdy();                            /* Execute target specific code to start task     */
+        OSStartHighRdy();                            /* 执行目标特定代码以启动任务 Execute target specific code to start task     */
     }
 }
 /*$PAGE*/
@@ -1310,7 +1310,8 @@ static  void  OS_InitEventList (void)
     OS_EVENT  *pevent2;
 
 
-    OS_MemClr((INT8U *)&OSEventTbl[0], sizeof(OSEventTbl)); /* Clear the event table                   */
+    OS_MemClr((INT8U *)&OSEventTbl[0], sizeof(OSEventTbl)); /* 清除事件表 Clear the event table                   */
+    // 把事件表链接起来
     for (ix = 0u; ix < (OS_MAX_EVENTS - 1u); ix++) {        /* Init. list of free EVENT control blocks */
         ix_next = ix + 1u;
         pevent1 = &OSEventTbl[ix];
@@ -1400,7 +1401,7 @@ static  void  OS_InitRdyList (void)
 {
     INT8U  i;
 
-
+    // 清空任务就绪表
     OSRdyGrp      = 0u;                                    /* Clear the ready list                     */
     for (i = 0u; i < OS_RDY_TBL_SIZE; i++) {
         OSRdyTbl[i] = 0u;
@@ -1559,8 +1560,11 @@ static  void  OS_InitTCBList (void)
     OS_TCB  *ptcb2;
 
 
+    // 清空所有任务控制块
     OS_MemClr((INT8U *)&OSTCBTbl[0],     sizeof(OSTCBTbl));      /* Clear all the TCBs                 */
+    // 清空任务控制块优先级表
     OS_MemClr((INT8U *)&OSTCBPrioTbl[0], sizeof(OSTCBPrioTbl));  /* Clear the priority table           */
+    // 把任务控制块链接起来
     for (ix = 0u; ix < (OS_MAX_TASKS + OS_N_SYS_TASKS - 1u); ix++) {    /* Init. list of free TCBs     */
         ix_next =  ix + 1u;
         ptcb1   = &OSTCBTbl[ix];
@@ -1668,7 +1672,7 @@ void  OS_Sched (void)
 
 
     OS_ENTER_CRITICAL();
-    if (OSIntNesting == 0u) {                          /* Schedule only if all ISRs done and ...       */
+    if (OSIntNesting == 0u) {                          /* 仅当所有 ISR 都已完成且调度程序未锁定时才进行调度 Schedule only if all ISRs done and ...       */
         if (OSLockNesting == 0u) {                     /* ... scheduler is not locked                  */
             OS_SchedNew();
             OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
@@ -1707,7 +1711,7 @@ void  OS_Sched (void)
 *              2) Interrupts are assumed to be disabled when this function is called.
 *********************************************************************************************************
 */
-
+//　找到优先极最高的就绪任务
 static  void  OS_SchedNew (void)
 {
 #if OS_LOWEST_PRIO <= 63u                        /* See if we support up to 64 tasks                   */
@@ -1985,9 +1989,9 @@ INT8U  OS_TCBInit (INT8U    prio,
 
 
     OS_ENTER_CRITICAL();
-    ptcb = OSTCBFreeList;                                  /* Get a free TCB from the free TCB list    */
+    ptcb = OSTCBFreeList;                                  /* 找到第一个空的TCB Get a free TCB from the free TCB list    */
     if (ptcb != (OS_TCB *)0) {
-        OSTCBFreeList            = ptcb->OSTCBNext;        /* Update pointer to free TCB list          */
+        OSTCBFreeList            = ptcb->OSTCBNext;        /* 更新空TCB列表 Update pointer to free TCB list          */
         OS_EXIT_CRITICAL();
         ptcb->OSTCBStkPtr        = ptos;                   /* Load Stack pointer in TCB                */
         ptcb->OSTCBPrio          = prio;                   /* Load task priority into TCB              */
@@ -2075,7 +2079,7 @@ INT8U  OS_TCBInit (INT8U    prio,
 #endif
 
         OS_ENTER_CRITICAL();
-        ptcb->OSTCBNext = OSTCBList;                       /* Link into TCB chain                      */
+        ptcb->OSTCBNext = OSTCBList;                       /* 将创建好的TCB放到列表头 Link into TCB chain                      */
         ptcb->OSTCBPrev = (OS_TCB *)0;         
         if (OSTCBList != (OS_TCB *)0) {
             OSTCBList->OSTCBPrev = ptcb;

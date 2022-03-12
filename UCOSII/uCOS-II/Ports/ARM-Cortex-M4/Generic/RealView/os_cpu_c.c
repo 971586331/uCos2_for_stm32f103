@@ -286,6 +286,7 @@ void  OSTaskStatHook (void)
 *********************************************************************************************************
 */
 
+// 预留CPU寄存器的堆栈空间
 OS_STK *OSTaskStkInit (void (*task)(void *p_arg), void *p_arg, OS_STK *ptos, INT16U opt)
 {
     OS_STK *p_stk;

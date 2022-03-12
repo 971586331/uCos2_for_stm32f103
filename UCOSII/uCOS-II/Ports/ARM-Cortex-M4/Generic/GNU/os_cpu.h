@@ -145,7 +145,7 @@ typedef unsigned int   OS_CPU_SR;                /* Define size of CPU status re
 *********************************************************************************************************
 */
 
-#define  OS_STK_GROWTH        1u                  /* Stack grows from HIGH to LOW memory on ARM        */
+#define  OS_STK_GROWTH        1u                  /* 堆栈在 ARM 上从 HIGH 增长到 LOW 内存 Stack grows from HIGH to LOW memory on ARM        */
 
 #define  OS_TASK_SW()         OSCtxSw()
 

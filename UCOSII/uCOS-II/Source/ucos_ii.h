@@ -556,7 +556,7 @@ typedef struct os_stk_data {
 */
 
 typedef struct os_tcb {
-    OS_STK          *OSTCBStkPtr;           /* Pointer to current top of stack                         */
+    OS_STK          *OSTCBStkPtr;           /* 栈顶 Pointer to current top of stack                         */
 
 #if OS_TASK_CREATE_EXT_EN > 0u
     void            *OSTCBExtPtr;           /* Pointer to user definable data for TCB extension        */
@@ -566,8 +566,8 @@ typedef struct os_tcb {
     INT16U           OSTCBId;               /* Task ID (0..65535)                                      */
 #endif
 
-    struct os_tcb   *OSTCBNext;             /* Pointer to next     TCB in the TCB list                 */
-    struct os_tcb   *OSTCBPrev;             /* Pointer to previous TCB in the TCB list                 */
+    struct os_tcb   *OSTCBNext;             /* 下一个TCB Pointer to next     TCB in the TCB list                 */
+    struct os_tcb   *OSTCBPrev;             /* 上一个TCB Pointer to previous TCB in the TCB list                 */
 
 #if OS_TASK_CREATE_EXT_EN > 0u
 #if defined(OS_TLS_TBL_SIZE) && (OS_TLS_TBL_SIZE > 0u)
@@ -576,7 +576,7 @@ typedef struct os_tcb {
 #endif
 
 #if (OS_EVENT_EN)
-    OS_EVENT        *OSTCBEventPtr;         /* Pointer to          event control block                 */
+    OS_EVENT        *OSTCBEventPtr;         /* 事件控制块 Pointer to          event control block                 */
 #endif
 
 #if (OS_EVENT_EN) && (OS_EVENT_MULTI_EN > 0u)
@@ -584,7 +584,7 @@ typedef struct os_tcb {
 #endif
 
 #if ((OS_Q_EN > 0u) && (OS_MAX_QS > 0u)) || (OS_MBOX_EN > 0u)
-    void            *OSTCBMsg;              /* Message received from OSMboxPost() or OSQPost()         */
+    void            *OSTCBMsg;              /* 传递给任务的消息 Message received from OSMboxPost() or OSQPost()         */
 #endif
 
 #if (OS_FLAG_EN > 0u) && (OS_MAX_FLAGS > 0u)
@@ -594,12 +594,12 @@ typedef struct os_tcb {
     OS_FLAGS         OSTCBFlagsRdy;         /* Event flags that made task ready to run                 */
 #endif
 
-    INT32U           OSTCBDly;              /* Nbr ticks to delay task or, timeout waiting for event   */
-    INT8U            OSTCBStat;             /* Task      status                                        */
-    INT8U            OSTCBStatPend;         /* Task PEND status                                        */
-    INT8U            OSTCBPrio;             /* Task priority (0 == highest)                            */
+    INT32U           OSTCBDly;              /* 任务等待的时间节拍 Nbr ticks to delay task or, timeout waiting for event   */
+    INT8U            OSTCBStat;             /* 任务的状态 Task      status                                        */
+    INT8U            OSTCBStatPend;         /* 任务挂起状态 Task PEND status                                        */
+    INT8U            OSTCBPrio;             /* 任务的优先级 Task priority (0 == highest)                            */
 
-    INT8U            OSTCBX;                /* Bit position in group  corresponding to task priority   */
+    INT8U            OSTCBX;                /* 这4个数据用于快速访问就绪表 Bit position in group  corresponding to task priority   */
     INT8U            OSTCBY;                /* Index into ready table corresponding to task priority   */
     OS_PRIO          OSTCBBitX;             /* Bit mask to access bit position in ready table          */
     OS_PRIO          OSTCBBitY;             /* Bit mask to access bit position in ready group          */
@@ -609,7 +609,7 @@ typedef struct os_tcb {
 #endif
 
 #if OS_TASK_PROFILE_EN > 0u
-    INT32U           OSTCBCtxSwCtr;         /* Number of time the task was switched in                 */
+    INT32U           OSTCBCtxSwCtr;         /* 任务被切换的次数 Number of time the task was switched in                 */
     INT32U           OSTCBCyclesTot;        /* Total number of clock cycles the task has been running  */
     INT32U           OSTCBCyclesStart;      /* Snapshot of cycle counter at start of task resumption   */
     OS_STK          *OSTCBStkBase;          /* Pointer to the beginning of the task stack              */
@@ -709,10 +709,10 @@ OS_EXT  INT8U             OSIntNesting;             /* Interrupt nesting level  
 
 OS_EXT  INT8U             OSLockNesting;            /* Multitasking lock nesting level                 */
 
-OS_EXT  INT8U             OSPrioCur;                /* Priority of current task                        */
-OS_EXT  INT8U             OSPrioHighRdy;            /* Priority of highest priority task               */
+OS_EXT  INT8U             OSPrioCur;                /* 当前任务的优先级 Priority of current task                        */
+OS_EXT  INT8U             OSPrioHighRdy;            /* 最高优先级任务的优先级 Priority of highest priority task               */
 
-OS_EXT  OS_PRIO           OSRdyGrp;                        /* Ready list group                         */
+OS_EXT  OS_PRIO           OSRdyGrp;                        /* 就绪列表组 Ready list group                         */
 OS_EXT  OS_PRIO           OSRdyTbl[OS_RDY_TBL_SIZE];       /* Table of tasks which are ready to run    */
 
 OS_EXT  BOOLEAN           OSRunning;                       /* Flag indicating that kernel is running   */
@@ -729,9 +729,9 @@ OS_EXT  OS_STK            OSTaskIdleStk[OS_TASK_IDLE_STK_SIZE];      /* Idle tas
 
 
 OS_EXT  OS_TCB           *OSTCBCur;                        /* Pointer to currently running TCB         */
-OS_EXT  OS_TCB           *OSTCBFreeList;                   /* Pointer to list of free TCBs             */
+OS_EXT  OS_TCB           *OSTCBFreeList;                   /* 向空闲 TCB 列表的指针 Pointer to list of free TCBs             */
 OS_EXT  OS_TCB           *OSTCBHighRdy;                    /* Pointer to highest priority TCB R-to-R   */
-OS_EXT  OS_TCB           *OSTCBList;                       /* Pointer to doubly linked list of TCBs    */
+OS_EXT  OS_TCB           *OSTCBList;                       /* 指向 TCB 的双向链表的指针 Pointer to doubly linked list of TCBs    */
 OS_EXT  OS_TCB           *OSTCBPrioTbl[OS_LOWEST_PRIO + 1u];    /* Table of pointers to created TCBs   */
 OS_EXT  OS_TCB            OSTCBTbl[OS_MAX_TASKS + OS_N_SYS_TASKS];   /* Table of TCBs                  */
 
