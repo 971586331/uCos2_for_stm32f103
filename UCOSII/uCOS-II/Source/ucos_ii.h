@@ -117,9 +117,9 @@ extern "C" {
 *                          TASK PEND STATUS (Status codes for OSTCBStatPend)
 *********************************************************************************************************
 */
-#define  OS_STAT_PEND_OK                0u  /* Pending status OK, not pending, or pending complete     */
-#define  OS_STAT_PEND_TO                1u  /* Pending timed out                                       */
-#define  OS_STAT_PEND_ABORT             2u  /* Pending aborted                                         */
+#define  OS_STAT_PEND_OK                0u  /* 待处理状态 OK、未待处理或待处理完成 Pending status OK, not pending, or pending complete     */
+#define  OS_STAT_PEND_TO                1u  /* 等待超时 Pending timed out                                       */
+#define  OS_STAT_PEND_ABORT             2u  /* 等待中止 Pending aborted                                         */
 
 /*
 *********************************************************************************************************
@@ -169,9 +169,9 @@ extern "C" {
 */
 
 #if OS_TICK_STEP_EN > 0u
-#define  OS_TICK_STEP_DIS               0u  /* Stepping is disabled, tick runs as normal               */
-#define  OS_TICK_STEP_WAIT              1u  /* Waiting for uC/OS-View to set OSTickStepState to _ONCE  */
-#define  OS_TICK_STEP_ONCE              2u  /* Process tick once and wait for next cmd from uC/OS-View */
+#define  OS_TICK_STEP_DIS               0u  /* 步进被禁用，滴答声正常运行 Stepping is disabled, tick runs as normal               */
+#define  OS_TICK_STEP_WAIT              1u  /* 等待 uC/OS-View 将 OSTickStepState 设置为 _ONCE Waiting for uC/OS-View to set OSTickStepState to _ONCE  */
+#define  OS_TICK_STEP_ONCE              2u  /* 处理一次并等待来自 uC/OS-View 的下一个 cmd Process tick once and wait for next cmd from uC/OS-View */
 #endif
 
 /*
@@ -736,7 +736,7 @@ OS_EXT  OS_TCB           *OSTCBPrioTbl[OS_LOWEST_PRIO + 1u];    /* Table of poin
 OS_EXT  OS_TCB            OSTCBTbl[OS_MAX_TASKS + OS_N_SYS_TASKS];   /* Table of TCBs                  */
 
 #if OS_TICK_STEP_EN > 0u
-OS_EXT  INT8U             OSTickStepState;          /* Indicates the state of the tick step feature    */
+OS_EXT  INT8U             OSTickStepState;          /* 指示时钟节拍状态 Indicates the state of the tick step feature    */
 #endif
 
 #if (OS_MEM_EN > 0u) && (OS_MAX_MEM_PART > 0u)

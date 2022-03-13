@@ -84,11 +84,11 @@ INT8U  OSTaskChangePrio (INT8U  oldprio,
     }
 #endif
     OS_ENTER_CRITICAL();
-    if (OSTCBPrioTbl[newprio] != (OS_TCB *)0) {             /* New priority must not already exist     */
+    if (OSTCBPrioTbl[newprio] != (OS_TCB *)0) {             /* 新的优先级不能被占用 New priority must not already exist     */
         OS_EXIT_CRITICAL();
         return (OS_ERR_PRIO_EXIST);
     }
-    if (oldprio == OS_PRIO_SELF) {                          /* See if changing self                    */
+    if (oldprio == OS_PRIO_SELF) {                          /* 如果是自身 See if changing self                    */
         oldprio = OSTCBCur->OSTCBPrio;                      /* Yes, get priority                       */
     }
     ptcb = OSTCBPrioTbl[oldprio];
@@ -110,24 +110,24 @@ INT8U  OSTaskChangePrio (INT8U  oldprio,
     bity_new              = (OS_PRIO)(1uL << y_new);
     bitx_new              = (OS_PRIO)(1uL << x_new);
 
-    OSTCBPrioTbl[oldprio] = (OS_TCB *)0;                    /* Remove TCB from old priority            */
-    OSTCBPrioTbl[newprio] =  ptcb;                          /* Place pointer to TCB @ new priority     */
+    OSTCBPrioTbl[oldprio] = (OS_TCB *)0;                    /* 清除旧优先级指针 Remove TCB from old priority            */
+    OSTCBPrioTbl[newprio] =  ptcb;                          /* 将旧控制块给新优先级指针 Place pointer to TCB @ new priority     */
     y_old                 =  ptcb->OSTCBY;
     bity_old              =  ptcb->OSTCBBitY;
     bitx_old              =  ptcb->OSTCBBitX;
-    if ((OSRdyTbl[y_old] &   bitx_old) != 0u) {             /* If task is ready make it not            */
+    if ((OSRdyTbl[y_old] &   bitx_old) != 0u) {             /* 更新任务就绪表 If task is ready make it not            */
          OSRdyTbl[y_old] &= (OS_PRIO)~bitx_old;
          if (OSRdyTbl[y_old] == 0u) {
              OSRdyGrp &= (OS_PRIO)~bity_old;
          }
-         OSRdyGrp        |= bity_new;                       /* Make new priority ready to run          */
+         OSRdyGrp        |= bity_new;                       /* 更新任务就绪表组 Make new priority ready to run          */
          OSRdyTbl[y_new] |= bitx_new;
     }
 
 #if (OS_EVENT_EN)
     pevent = ptcb->OSTCBEventPtr;
     if (pevent != (OS_EVENT *)0) {
-        pevent->OSEventTbl[y_old] &= (OS_PRIO)~bitx_old;    /* Remove old task prio from wait list     */
+        pevent->OSEventTbl[y_old] &= (OS_PRIO)~bitx_old;    /* 更新事件控制块组 Remove old task prio from wait list     */
         if (pevent->OSEventTbl[y_old] == 0u) {
             pevent->OSEventGrp    &= (OS_PRIO)~bity_old;
         }
@@ -152,14 +152,14 @@ INT8U  OSTaskChangePrio (INT8U  oldprio,
 #endif
 #endif
 
-    ptcb->OSTCBPrio = newprio;                              /* Set new task priority                   */
+    ptcb->OSTCBPrio = newprio;                              /* 更新优先级 Set new task priority                   */
     ptcb->OSTCBY    = y_new;
     ptcb->OSTCBX    = x_new;
     ptcb->OSTCBBitY = bity_new;
     ptcb->OSTCBBitX = bitx_new;
     OS_EXIT_CRITICAL();
     if (OSRunning == OS_TRUE) {
-        OS_Sched();                                         /* Find new highest priority task          */
+        OS_Sched();                                         /* 任务调度 Find new highest priority task          */
     }
     return (OS_ERR_NONE);
 }
@@ -473,6 +473,7 @@ INT8U  OSTaskDel (INT8U prio)
         return (OS_ERR_TASK_DEL);
     }
 
+    // 清除任务就绪表
     OSRdyTbl[ptcb->OSTCBY] &= (OS_PRIO)~ptcb->OSTCBBitX;
     if (OSRdyTbl[ptcb->OSTCBY] == 0u) {                 /* Make task not ready                         */
         OSRdyGrp           &= (OS_PRIO)~ptcb->OSTCBBitY;
@@ -499,6 +500,12 @@ INT8U  OSTaskDel (INT8U prio)
     ptcb->OSTCBDly      = 0u;                           /* Prevent OSTimeTick() from updating          */
     ptcb->OSTCBStat     = OS_STAT_RDY;                  /* Prevent task from being resumed             */
     ptcb->OSTCBStatPend = OS_STAT_PEND_OK;
+    /*
+    为了能够，在执行OSTaskDel (INT8U prio)函数过程中，确保实时性。
+    需要在该函数中开一次中断，即退出临界区一段时间，执行OS_Dummy()函数。
+    OS_Dummy()函数是个空函数，什么也不做，就是给中断一定的时间。
+    然后再关中断，进入临界区继续执行OSTaskDel (INT8U prio)函数。
+    */
     if (OSLockNesting < 255u) {                         /* Make sure we don't context switch           */
         OSLockNesting++;
     }
@@ -517,15 +524,15 @@ INT8U  OSTaskDel (INT8U prio)
 #endif
 
     OSTaskCtr--;                                        /* One less task being managed                 */
-    OSTCBPrioTbl[prio] = (OS_TCB *)0;                   /* Clear old priority entry                    */
-    if (ptcb->OSTCBPrev == (OS_TCB *)0) {               /* Remove from TCB chain                       */
+    OSTCBPrioTbl[prio] = (OS_TCB *)0;                   /* 将任务控制块指针清空 Clear old priority entry                    */
+    if (ptcb->OSTCBPrev == (OS_TCB *)0) {               /* 如果这个任务在链表头,将下一个任务向前指针清空,并将控制块指针指向下一个任务 Remove from TCB chain                       */
         ptcb->OSTCBNext->OSTCBPrev = (OS_TCB *)0;
         OSTCBList                  = ptcb->OSTCBNext;
-    } else {
+    } else {    // 否则将上一个控制块和下一个控制块链接在一起
         ptcb->OSTCBPrev->OSTCBNext = ptcb->OSTCBNext;
         ptcb->OSTCBNext->OSTCBPrev = ptcb->OSTCBPrev;
     }
-    ptcb->OSTCBNext     = OSTCBFreeList;                /* Return TCB to free TCB list                 */
+    ptcb->OSTCBNext     = OSTCBFreeList;                /* 将空的任务控制块放到free链表的最前面 Return TCB to free TCB list                 */
     OSTCBFreeList       = ptcb;
 #if OS_TASK_NAME_EN > 0u
     ptcb->OSTCBTaskName = (INT8U *)(void *)"?";

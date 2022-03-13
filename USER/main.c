@@ -102,23 +102,26 @@ void led0_task(void *pdata)
 {	 
     int count = 0;
     OS_TCB    *ptcb;
-
+    ptcb = OSTCBPrioTbl[LED0_TASK_PRIO];
 	while(1)
 	{
-        ptcb = OSTCBPrioTbl[LED1_TASK_PRIO];
         count ++;
         printf("led0_task!\n");
         if( count == 5 ) {
-            printf("led1_task OSTCBDly 111 = %d!\n", ptcb->OSTCBDly);
-            OSTaskSuspend(LED1_TASK_PRIO);
+            OSSchedLock();
         }
         if( count == 10 ) {
-            
-            printf("led1_task OSTCBDly 222 = %d!\n", ptcb->OSTCBDly);
-            OSTaskResume(LED1_TASK_PRIO);
+            OSSchedUnlock();
             count = 0;
         }
-        OSTimeDlyHMSM(0, 0, 0, 100);
+        OSTimeDlyHMSM(0, 0, 1, 0);  // 锁调度器后delya不起作用
+        printf("led0_task end\n");
+        OSTaskChangePrio(LED0_TASK_PRIO, 8);
+        OSTaskDel(LED0_TASK_PRIO);
+        OSTaskDelReq(LED0_TASK_PRIO);
+        OSTimeDlyResume(LED0_TASK_PRIO);
+        OSTimeGet();
+        OSTimeSet(10);
 	};
 }
 
@@ -128,6 +131,6 @@ void led1_task(void *pdata)
 	while(1)
 	{
         printf("led1_task!\n");
-        OSTimeDlyHMSM(0, 0, 0, 50);
+        OSTimeDlyHMSM(0, 0, 0, 500);
 	}
 }

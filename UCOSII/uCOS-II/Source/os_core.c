@@ -772,7 +772,7 @@ void  OSSchedLock (void)
         OS_ENTER_CRITICAL();
         if (OSIntNesting == 0u) {                /* Can't call from an ISR                             */
             if (OSLockNesting < 255u) {          /* Prevent OSLockNesting from wrapping back to 0      */
-                OSLockNesting++;                 /* Increment lock nesting level                       */
+                OSLockNesting++;                 /* 递增锁嵌套级别 Increment lock nesting level                       */
             }
         }
         OS_EXIT_CRITICAL();
@@ -912,7 +912,7 @@ void  OSStatInit (void)
 * Returns    : none
 *********************************************************************************************************
 */
-
+// 放到定时器中断中定时调用
 void  OSTimeTick (void)
 {
     OS_TCB    *ptcb;
@@ -958,12 +958,12 @@ void  OSTimeTick (void)
             return;
         }
 #endif
-        ptcb = OSTCBList;                                  /* Point at first TCB in TCB list               */
-        while (ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO) {     /* Go through all TCBs in TCB list              */
+        ptcb = OSTCBList;                                  /* 依次将任务控制块取出 Point at first TCB in TCB list               */
+        while (ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO) {     /* 如果不是空闲任务 Go through all TCBs in TCB list              */
             OS_ENTER_CRITICAL();
             if (ptcb->OSTCBDly != 0u) {                    /* No, Delayed or waiting for event with TO     */
-                ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
-                if (ptcb->OSTCBDly == 0u) {                /* Check for timeout                            */
+                ptcb->OSTCBDly--;                          /* 将时间节拍-1 Decrement nbr of ticks to end of delay       */
+                if (ptcb->OSTCBDly == 0u) {                /* 如果任务时间节拍到达 Check for timeout                            */
 
                     if ((ptcb->OSTCBStat & OS_STAT_PEND_ANY) != OS_STAT_RDY) {
                         ptcb->OSTCBStat  &= (INT8U)~(INT8U)OS_STAT_PEND_ANY;          /* Yes, Clear status flag   */
@@ -972,8 +972,9 @@ void  OSTimeTick (void)
                         ptcb->OSTCBStatPend = OS_STAT_PEND_OK;
                     }
 
-                    if ((ptcb->OSTCBStat & OS_STAT_SUSPEND) == OS_STAT_RDY) {  /* Is task suspended?       */
-                        OSRdyGrp               |= ptcb->OSTCBBitY;             /* No,  Make ready          */
+
+                    if ((ptcb->OSTCBStat & OS_STAT_SUSPEND) == OS_STAT_RDY) {  /* 任务是否暂停？ Is task suspended?       */
+                        OSRdyGrp               |= ptcb->OSTCBBitY;             /* 将任务在变绪表中置位 No,  Make ready          */
                         OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
                     }
                 }
