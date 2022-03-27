@@ -96,41 +96,40 @@ void start_task(void *pdata)
     OS_EXIT_CRITICAL();             //退出临界区(开中断)
 	OSTaskSuspend(START_TASK_PRIO); //挂起开始任务
 }
- 
+
+OS_EVENT *sem1 = NULL;
+
 //LED0任务
 void led0_task(void *pdata)
 {	 
     int count = 0;
-    OS_TCB    *ptcb;
-    ptcb = OSTCBPrioTbl[LED0_TASK_PRIO];
+
+    sem1 = OSSemCreate(0);
 	while(1)
 	{
         count ++;
         printf("led0_task!\n");
         if( count == 5 ) {
-            OSSchedLock();
         }
         if( count == 10 ) {
-            OSSchedUnlock();
             count = 0;
         }
         OSTimeDlyHMSM(0, 0, 1, 0);  // 锁调度器后delya不起作用
-        printf("led0_task end\n");
-        OSTaskChangePrio(LED0_TASK_PRIO, 8);
-        OSTaskDel(LED0_TASK_PRIO);
-        OSTaskDelReq(LED0_TASK_PRIO);
-        OSTimeDlyResume(LED0_TASK_PRIO);
-        OSTimeGet();
-        OSTimeSet(10);
+        OSSemPost(sem1);
 	};
 }
 
 //LED1任务
 void led1_task(void *pdata)
-{	  
+{
+    INT8U err = 0;
+    OS_SEM_DATA data;
 	while(1)
 	{
+        OSSemPend(sem1, 100, &err);
         printf("led1_task!\n");
         OSTimeDlyHMSM(0, 0, 0, 500);
+        OSSemDel(sem1, 0, &err);
+        OSSemQuery(sem1, &data);
 	}
 }

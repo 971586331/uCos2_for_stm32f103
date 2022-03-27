@@ -101,14 +101,14 @@ extern "C" {
 *                             TASK STATUS (Bit definition for OSTCBStat)
 *********************************************************************************************************
 */
-#define  OS_STAT_RDY                 0x00u  /* Ready to run                                            */
-#define  OS_STAT_SEM                 0x01u  /* Pending on semaphore                                    */
-#define  OS_STAT_MBOX                0x02u  /* Pending on mailbox                                      */
-#define  OS_STAT_Q                   0x04u  /* Pending on queue                                        */
-#define  OS_STAT_SUSPEND             0x08u  /* Task is suspended                                       */
-#define  OS_STAT_MUTEX               0x10u  /* Pending on mutual exclusion semaphore                   */
-#define  OS_STAT_FLAG                0x20u  /* Pending on event flag group                             */
-#define  OS_STAT_MULTI               0x80u  /* Pending on multiple events                              */
+#define  OS_STAT_RDY                 0x00u  /* 准备运行 Ready to run                                            */
+#define  OS_STAT_SEM                 0x01u  /* 等待信号量 Pending on semaphore                                    */
+#define  OS_STAT_MBOX                0x02u  /* 等待邮箱 Pending on mailbox                                      */
+#define  OS_STAT_Q                   0x04u  /* 等待队列 Pending on queue                                        */
+#define  OS_STAT_SUSPEND             0x08u  /* 任务暂停 Task is suspended                                       */
+#define  OS_STAT_MUTEX               0x10u  /* 等待互斥信号量 Pending on mutual exclusion semaphore                   */
+#define  OS_STAT_FLAG                0x20u  /* 待处理事件标志组 Pending on event flag group                             */
+#define  OS_STAT_MULTI               0x80u  /* 等待多个事件 Pending on multiple events                              */
 
 #define  OS_STAT_PEND_ANY         (OS_STAT_SEM | OS_STAT_MBOX | OS_STAT_Q | OS_STAT_MUTEX | OS_STAT_FLAG)
 
@@ -374,11 +374,11 @@ typedef  INT16U   OS_PRIO;
 
 #if (OS_EVENT_EN) && (OS_MAX_EVENTS > 0u)
 typedef struct os_event {
-    INT8U    OSEventType;                   /* Type of event control block (see OS_EVENT_TYPE_xxxx)    */
-    void    *OSEventPtr;                    /* Pointer to message or queue structure                   */
-    INT16U   OSEventCnt;                    /* Semaphore Count (not used if other EVENT type)          */
-    OS_PRIO  OSEventGrp;                    /* Group corresponding to tasks waiting for event to occur */
-    OS_PRIO  OSEventTbl[OS_EVENT_TBL_SIZE]; /* List of tasks waiting for event to occur                */
+    INT8U    OSEventType;                   /* 事件的类型 Type of event control block (see OS_EVENT_TYPE_xxxx)    */
+    void    *OSEventPtr;                    /* 消息或消息队列的指针 Pointer to message or queue structure                   */
+    INT16U   OSEventCnt;                    /* 信号量的计数 Semaphore Count (not used if other EVENT type)          */
+    OS_PRIO  OSEventGrp;                    /* 等待事件的任务组  Group corresponding to tasks waiting for event to occur */
+    OS_PRIO  OSEventTbl[OS_EVENT_TBL_SIZE]; /* 任务等待表 List of tasks waiting for event to occur                */
 
 #if OS_EVENT_NAME_EN > 0u
     INT8U   *OSEventName;
@@ -580,7 +580,7 @@ typedef struct os_tcb {
 #endif
 
 #if (OS_EVENT_EN) && (OS_EVENT_MULTI_EN > 0u)
-    OS_EVENT       **OSTCBEventMultiPtr;    /* Pointer to multiple event control blocks                */
+    OS_EVENT       **OSTCBEventMultiPtr;    /* 指向多个事件控制块的指针 Pointer to multiple event control blocks                */
 #endif
 
 #if ((OS_Q_EN > 0u) && (OS_MAX_QS > 0u)) || (OS_MBOX_EN > 0u)
@@ -707,7 +707,7 @@ OS_EXT  OS_STK            OSTaskStatStk[OS_TASK_STAT_STK_SIZE];      /* Statisti
 
 OS_EXT  INT8U             OSIntNesting;             /* Interrupt nesting level                         */
 
-OS_EXT  INT8U             OSLockNesting;            /* Multitasking lock nesting level                 */
+OS_EXT  INT8U             OSLockNesting;            /* 多任务锁嵌套级别 Multitasking lock nesting level                 */
 
 OS_EXT  INT8U             OSPrioCur;                /* 当前任务的优先级 Priority of current task                        */
 OS_EXT  INT8U             OSPrioHighRdy;            /* 最高优先级任务的优先级 Priority of highest priority task               */

@@ -1070,7 +1070,7 @@ INT8U  OS_EventTaskRdy (OS_EVENT  *pevent,
 #if OS_LOWEST_PRIO <= 63u
     y    = OSUnMapTbl[pevent->OSEventGrp];              /* Find HPT waiting for message                */
     x    = OSUnMapTbl[pevent->OSEventTbl[y]];
-    prio = (INT8U)((y << 3u) + x);                      /* Find priority of task getting the msg       */
+    prio = (INT8U)((y << 3u) + x);                      /* 找到正在等待这个信号量的最高优先级任务 Find priority of task getting the msg       */
 #else
     if ((pevent->OSEventGrp & 0xFFu) != 0u) {           /* Find HPT waiting for message                */
         y = OSUnMapTbl[ pevent->OSEventGrp & 0xFFu];
@@ -1086,22 +1086,22 @@ INT8U  OS_EventTaskRdy (OS_EVENT  *pevent,
     prio = (INT8U)((y << 4u) + x);                      /* Find priority of task getting the msg       */
 #endif
 
-    ptcb                  =  OSTCBPrioTbl[prio];        /* Point to this task's OS_TCB                 */
+    ptcb                  =  OSTCBPrioTbl[prio];        /* 找到任务的TCB Point to this task's OS_TCB                 */
     ptcb->OSTCBDly        =  0u;                        /* Prevent OSTimeTick() from readying task     */
 #if ((OS_Q_EN > 0u) && (OS_MAX_QS > 0u)) || (OS_MBOX_EN > 0u)
     ptcb->OSTCBMsg        =  pmsg;                      /* Send message directly to waiting task       */
 #else
     pmsg                  =  pmsg;                      /* Prevent compiler warning if not used        */
 #endif
-    ptcb->OSTCBStat      &= (INT8U)~msk;                /* Clear bit associated with event type        */
-    ptcb->OSTCBStatPend   =  pend_stat;                 /* Set pend status of post or abort            */
-                                                        /* See if task is ready (could be susp'd)      */
+    ptcb->OSTCBStat      &= (INT8U)~msk;                /* 清除信号量标志 Clear bit associated with event type        */
+    ptcb->OSTCBStatPend   =  pend_stat;                 /* 设置 post 或 abort 的挂起状态 Set pend status of post or abort            */
+                                                        /* 查看任务是否准备就绪（可能会被暂停） See if task is ready (could be susp'd)      */
     if ((ptcb->OSTCBStat &   OS_STAT_SUSPEND) == OS_STAT_RDY) {
-        OSRdyGrp         |=  ptcb->OSTCBBitY;           /* Put task in the ready to run list           */
+        OSRdyGrp         |=  ptcb->OSTCBBitY;           /* 将任务放入准备运行列表 Put task in the ready to run list           */
         OSRdyTbl[y]      |=  ptcb->OSTCBBitX;
     }
 
-    OS_EventTaskRemove(ptcb, pevent);                   /* Remove this task from event   wait list     */
+    OS_EventTaskRemove(ptcb, pevent);                   /* 从事件等待列表中删除此任务 Remove this task from event   wait list     */
 #if (OS_EVENT_MULTI_EN > 0u)
     if (ptcb->OSTCBEventMultiPtr != (OS_EVENT **)0) {   /* Remove this task from events' wait lists    */
         OS_EventTaskRemoveMulti(ptcb, ptcb->OSTCBEventMultiPtr);
@@ -1135,7 +1135,7 @@ void  OS_EventTaskWait (OS_EVENT *pevent)
 
     OSTCBCur->OSTCBEventPtr               = pevent;                 /* Store ptr to ECB in TCB         */
 
-    pevent->OSEventTbl[OSTCBCur->OSTCBY] |= OSTCBCur->OSTCBBitX;    /* Put task in waiting list        */
+    pevent->OSEventTbl[OSTCBCur->OSTCBY] |= OSTCBCur->OSTCBBitX;    /* 更新任务等待表，表示有任务正在等待这个信号量 Put task in waiting list        */
     pevent->OSEventGrp                   |= OSTCBCur->OSTCBBitY;
 
     y             =  OSTCBCur->OSTCBY;            /* Task no longer ready                              */
@@ -1267,7 +1267,7 @@ void  OS_EventTaskRemoveMulti (OS_TCB    *ptcb,
 *                             INITIALIZE EVENT CONTROL BLOCK'S WAIT LIST
 *
 * Description: This function is called by other uC/OS-II services to initialize the event wait list.
-*
+*               该函数被其他 uC/OS-II 服务调用以初始化事件等待列表。
 * Arguments  : pevent    is a pointer to the event control block allocated to the event.
 *
 * Returns    : none
@@ -1280,7 +1280,7 @@ void  OS_EventWaitListInit (OS_EVENT *pevent)
 {
     INT8U  i;
 
-
+    // 将事件控制块组和任务等待表初始化
     pevent->OSEventGrp = 0u;                     /* No task waiting on event                           */
     for (i = 0u; i < OS_EVENT_TBL_SIZE; i++) {
         pevent->OSEventTbl[i] = 0u;
