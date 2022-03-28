@@ -81,7 +81,7 @@ static  void  OSMutex_RdyAtPrio(OS_TCB *ptcb, INT8U prio);
 *              intended to be used by tasks only.
 *********************************************************************************************************
 */
-
+// 无等待地请求一个互斥型信号量
 #if OS_MUTEX_ACCEPT_EN > 0u
 BOOLEAN  OSMutexAccept (OS_EVENT  *pevent,
                         INT8U     *perr)
@@ -212,15 +212,15 @@ OS_EVENT  *OSMutexCreate (INT8U   prio,
     }
     OS_ENTER_CRITICAL();
     if (prio != OS_PRIO_MUTEX_CEIL_DIS) {
-        if (OSTCBPrioTbl[prio] != (OS_TCB *)0) {           /* Mutex priority must not already exist    */
+        if (OSTCBPrioTbl[prio] != (OS_TCB *)0) {           /* 要提升的优先级已经被占用了，返回错误 Mutex priority must not already exist    */
             OS_EXIT_CRITICAL();                            /* Task already exist at priority ...       */
            *perr = OS_ERR_PRIO_EXIST;                      /* ... ceiling priority                     */
             return ((OS_EVENT *)0);
         }
-        OSTCBPrioTbl[prio] = OS_TCB_RESERVED;              /* Reserve the table entry                  */
+        OSTCBPrioTbl[prio] = OS_TCB_RESERVED;              /* 没被占用先保留这个TCB Reserve the table entry                  */
     }
 
-    pevent = OSEventFreeList;                              /* Get next free event control block        */
+    pevent = OSEventFreeList;                              /* 获得一个事件控制块 Get next free event control block        */
     if (pevent == (OS_EVENT *)0) {                         /* See if an ECB was available              */
         if (prio != OS_PRIO_MUTEX_CEIL_DIS) {
             OSTCBPrioTbl[prio] = (OS_TCB *)0;              /* No, Release the table entry              */
@@ -231,7 +231,7 @@ OS_EVENT  *OSMutexCreate (INT8U   prio,
     }
     OSEventFreeList     = (OS_EVENT *)OSEventFreeList->OSEventPtr; /* Adjust the free list             */
     OS_EXIT_CRITICAL();
-    pevent->OSEventType = OS_EVENT_TYPE_MUTEX;
+    pevent->OSEventType = OS_EVENT_TYPE_MUTEX;  // 类型是互斥信号量
     pevent->OSEventCnt  = (INT16U)((INT16U)prio << 8u) | OS_MUTEX_AVAILABLE; /* Resource is avail.     */
     pevent->OSEventPtr  = (void *)0;                       /* No task owning the mutex                 */
 #if OS_EVENT_NAME_EN > 0u
@@ -321,13 +321,13 @@ OS_EVENT  *OSMutexDel (OS_EVENT  *pevent,
         return (pevent);
     }
     OS_ENTER_CRITICAL();
-    if (pevent->OSEventGrp != 0u) {                        /* See if any tasks waiting on mutex        */
+    if (pevent->OSEventGrp != 0u) {                        /* 查看是否有等待互斥锁的任务 See if any tasks waiting on mutex        */
         tasks_waiting = OS_TRUE;                           /* Yes                                      */
     } else {
         tasks_waiting = OS_FALSE;                          /* No                                       */
     }
     switch (opt) {
-        case OS_DEL_NO_PEND:                               /* DELETE MUTEX ONLY IF NO TASK WAITING --- */
+        case OS_DEL_NO_PEND:                               /* 仅在没有任务等待时删除互斥锁 DELETE MUTEX ONLY IF NO TASK WAITING --- */
              if (tasks_waiting == OS_FALSE) {
 #if OS_EVENT_NAME_EN > 0u
                  pevent->OSEventName   = (INT8U *)(void *)"?";
@@ -350,18 +350,18 @@ OS_EVENT  *OSMutexDel (OS_EVENT  *pevent,
              }
              break;
 
-        case OS_DEL_ALWAYS:                                /* ALWAYS DELETE THE MUTEX ---------------- */
+        case OS_DEL_ALWAYS:                                /* 总是删除互斥量 ALWAYS DELETE THE MUTEX ---------------- */
              pcp  = (INT8U)(pevent->OSEventCnt >> 8u);                       /* Get PCP of mutex       */
              if (pcp != OS_PRIO_MUTEX_CEIL_DIS) {
                  prio = (INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8); /* Get owner's orig prio  */
                  ptcb = (OS_TCB *)pevent->OSEventPtr;
                  if (ptcb != (OS_TCB *)0) {                /* See if any task owns the mutex           */
-                     if (ptcb->OSTCBPrio == pcp) {         /* See if original prio was changed         */
-                         OSMutex_RdyAtPrio(ptcb, prio);    /* Yes, Restore the task's original prio    */
+                     if (ptcb->OSTCBPrio == pcp) {         /* 如果互斥量所有者的优先级等于提升的优先级 See if original prio was changed         */
+                         OSMutex_RdyAtPrio(ptcb, prio);    /* 说明改变过优先级，恢复 Yes, Restore the task's original prio    */
                      }
                  }
              }
-             while (pevent->OSEventGrp != 0u) {            /* Ready ALL tasks waiting for mutex        */
+             while (pevent->OSEventGrp != 0u) {            /* 将所有等待这个事件的任务置为就绪状态 Ready ALL tasks waiting for mutex        */
                  (void)OS_EventTaskRdy(pevent, (void *)0, OS_STAT_MUTEX, OS_STAT_PEND_ABORT);
              }
 #if OS_EVENT_NAME_EN > 0u
@@ -374,7 +374,7 @@ OS_EVENT  *OSMutexDel (OS_EVENT  *pevent,
              pevent->OSEventType   = OS_EVENT_TYPE_UNUSED;
              pevent->OSEventPtr    = OSEventFreeList;      /* Return Event Control Block to free list  */
              pevent->OSEventCnt    = 0u;
-             OSEventFreeList       = pevent;               /* Get next free event control block        */
+             OSEventFreeList       = pevent;               /* 将控制块放回到空闲链表 Get next free event control block        */
              OS_EXIT_CRITICAL();
              if (tasks_waiting == OS_TRUE) {               /* Reschedule only if task(s) were waiting  */
                  OS_Sched();                               /* Find highest priority task ready to run  */
@@ -477,14 +477,14 @@ void  OSMutexPend (OS_EVENT  *pevent,
     }
 /*$PAGE*/
     OS_ENTER_CRITICAL();
-    pcp = (INT8U)(pevent->OSEventCnt >> 8u);               /* Get PCP from mutex                       */
-                                                           /* Is Mutex available?                      */
+    pcp = (INT8U)(pevent->OSEventCnt >> 8u);               /* 要提升的优先级 Get PCP from mutex                       */
+                                                           /* 互斥量没有被任务使用过 Is Mutex available?                      */
     if ((INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8) == OS_MUTEX_AVAILABLE) {
         pevent->OSEventCnt &= OS_MUTEX_KEEP_UPPER_8;       /* Yes, Acquire the resource                */
-        pevent->OSEventCnt |= OSTCBCur->OSTCBPrio;         /*      Save priority of owning task        */
+        pevent->OSEventCnt |= OSTCBCur->OSTCBPrio;         /* 低字节记录当前任务的优先级     Save priority of owning task        */
         pevent->OSEventPtr  = (void *)OSTCBCur;            /*      Point to owning task's OS_TCB       */
         if ((pcp != OS_PRIO_MUTEX_CEIL_DIS) &&
-            (OSTCBCur->OSTCBPrio <= pcp)) {                /*      PCP 'must' have a SMALLER prio ...  */
+            (OSTCBCur->OSTCBPrio <= pcp)) {                /* 当前任务的优先级高，则之后不用提升     PCP 'must' have a SMALLER prio ...  */
              OS_EXIT_CRITICAL();                           /*      ... than current task!              */
             *perr = OS_ERR_PCP_LOWER;
         } else {
@@ -494,20 +494,22 @@ void  OSMutexPend (OS_EVENT  *pevent,
         return;
     }
     if (pcp != OS_PRIO_MUTEX_CEIL_DIS) {
-        mprio = (INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8); /*  Get priority of mutex owner   */
+        mprio = (INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8); /* 获取互斥量所有者的优先级 Get priority of mutex owner   */
         ptcb  = (OS_TCB *)(pevent->OSEventPtr);                   /*     Point to TCB of mutex owner   */
-        if (ptcb->OSTCBPrio > pcp) {                              /*     Need to promote prio of owner?*/
-            if (mprio > OSTCBCur->OSTCBPrio) {
+        if (ptcb->OSTCBPrio > pcp) {                              /* 如果当前任务的优先级低于要提升的优先级 Need to promote prio of owner?*/
+            if (mprio > OSTCBCur->OSTCBPrio) {                      // 而互斥锁所有者的优先级又低于当前任务的优先级，这样才需要提升优先级
                 y = ptcb->OSTCBY;
-                if ((OSRdyTbl[y] & ptcb->OSTCBBitX) != 0u) {      /*     See if mutex owner is ready   */
-                    OSRdyTbl[y] &= (OS_PRIO)~ptcb->OSTCBBitX;     /*     Yes, Remove owner from Rdy ...*/
+                if ((OSRdyTbl[y] & ptcb->OSTCBBitX) != 0u) {      /* 查看互斥锁所有者是否就绪    See if mutex owner is ready   */
+                    OSRdyTbl[y] &= (OS_PRIO)~ptcb->OSTCBBitX;     /* 把互斥锁所有者的任务置为非就绪态    Yes, Remove owner from Rdy ...*/
                     if (OSRdyTbl[y] == 0u) {                      /*          ... list at current prio */
                         OSRdyGrp &= (OS_PRIO)~ptcb->OSTCBBitY;
                     }
                     rdy = OS_TRUE;
                 } else {
+                    // 拿互斥锁所有者任务的等待事件列表，将该任务的所有等待事件清空，
+                    // 其目的是让持有Mutex的任务赶快执行，执行完毕后才能轮到比它优先级高的当前任务执行。
                     pevent2 = ptcb->OSTCBEventPtr;
-                    if (pevent2 != (OS_EVENT *)0) {               /* Remove from event wait list       */
+                    if (pevent2 != (OS_EVENT *)0) {               /* 从事件等待列表中删除 Remove from event wait list       */
                         y = ptcb->OSTCBY;
                         pevent2->OSEventTbl[y] &= (OS_PRIO)~ptcb->OSTCBBitX;
                         if (pevent2->OSEventTbl[y] == 0u) {
@@ -516,7 +518,7 @@ void  OSMutexPend (OS_EVENT  *pevent,
                     }
                     rdy = OS_FALSE;                        /* No                                       */
                 }
-                ptcb->OSTCBPrio = pcp;                     /* Change owner task prio to PCP            */
+                ptcb->OSTCBPrio = pcp;                     /* 提升互斥锁所有者任务的优先级 Change owner task prio to PCP            */
 #if OS_LOWEST_PRIO <= 63u
                 ptcb->OSTCBY    = (INT8U)( ptcb->OSTCBPrio >> 3u);
                 ptcb->OSTCBX    = (INT8U)( ptcb->OSTCBPrio & 0x07u);
@@ -527,7 +529,7 @@ void  OSMutexPend (OS_EVENT  *pevent,
                 ptcb->OSTCBBitY = (OS_PRIO)(1uL << ptcb->OSTCBY);
                 ptcb->OSTCBBitX = (OS_PRIO)(1uL << ptcb->OSTCBX);
 
-                if (rdy == OS_TRUE) {                      /* If task was ready at owner's priority ...*/
+                if (rdy == OS_TRUE) {                      /* 如果任务以所有者的优先级准备就绪 If task was ready at owner's priority ...*/
                     OSRdyGrp               |= ptcb->OSTCBBitY; /* ... make it ready at new priority.   */
                     OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
                 } else {
@@ -537,17 +539,18 @@ void  OSMutexPend (OS_EVENT  *pevent,
                         pevent2->OSEventTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
                     }
                 }
-                OSTCBPrioTbl[pcp] = ptcb;
+                OSTCBPrioTbl[pcp] = ptcb;   // 将任务控制块生意放到表中
             }
         }
     }
-    OSTCBCur->OSTCBStat     |= OS_STAT_MUTEX;         /* Mutex not available, pend current task        */
+    OSTCBCur->OSTCBStat     |= OS_STAT_MUTEX;         /* 互斥锁不可用，挂起当前任务 Mutex not available, pend current task        */
     OSTCBCur->OSTCBStatPend  = OS_STAT_PEND_OK;
     OSTCBCur->OSTCBDly       = timeout;               /* Store timeout in current task's TCB           */
     OS_EventTaskWait(pevent);                         /* Suspend task until event or timeout occurs    */
     OS_EXIT_CRITICAL();
     OS_Sched();                                       /* Find next highest priority task ready         */
     OS_ENTER_CRITICAL();
+    // 运行到这时说明已经获得了信号量
     switch (OSTCBCur->OSTCBStatPend) {                /* See if we timed-out or aborted                */
         case OS_STAT_PEND_OK:
              *perr = OS_ERR_NONE;
@@ -619,21 +622,21 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
     }
     OS_ENTER_CRITICAL();
     pcp  = (INT8U)(pevent->OSEventCnt >> 8u);         /* Get priority ceiling priority of mutex        */
-    prio = (INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8);  /* Get owner's original priority      */
-    if (OSTCBCur != (OS_TCB *)pevent->OSEventPtr) {   /* See if posting task owns the MUTEX            */
+    prio = (INT8U)(pevent->OSEventCnt & OS_MUTEX_KEEP_LOWER_8);  /* 获得要提升的优先级 Get owner's original priority      */
+    if (OSTCBCur != (OS_TCB *)pevent->OSEventPtr) {   /* 当前任务是否拥有这个互斥量 See if posting task owns the MUTEX            */
         OS_EXIT_CRITICAL();
         return (OS_ERR_NOT_MUTEX_OWNER);
     }
     if (pcp != OS_PRIO_MUTEX_CEIL_DIS) {
-        if (OSTCBCur->OSTCBPrio == pcp) {             /* Did we have to raise current task's priority? */
-            OSMutex_RdyAtPrio(OSTCBCur, prio);        /* Restore the task's original priority          */
+        if (OSTCBCur->OSTCBPrio == pcp) {             /* 优先级是否被提高过？ Did we have to raise current task's priority? */
+            OSMutex_RdyAtPrio(OSTCBCur, prio);        /* 恢复原先的优先级 Restore the task's original priority          */
         }
         OSTCBPrioTbl[pcp] = OS_TCB_RESERVED;          /* Reserve table entry                           */
     }
-    if (pevent->OSEventGrp != 0u) {                   /* Any task waiting for the mutex?               */
-                                                      /* Yes, Make HPT waiting for mutex ready         */
+    if (pevent->OSEventGrp != 0u) {                   /* 有等待互斥锁的任务吗？ Any task waiting for the mutex?               */
+                                                      /* 找出等待这个互斥锁的最高优先级任务，并置为就绪状态 Yes, Make HPT waiting for mutex ready         */
         prio                = OS_EventTaskRdy(pevent, (void *)0, OS_STAT_MUTEX, OS_STAT_PEND_OK);
-        pevent->OSEventCnt &= OS_MUTEX_KEEP_UPPER_8;  /*      Save priority of mutex's new owner       */
+        pevent->OSEventCnt &= OS_MUTEX_KEEP_UPPER_8;  /* 低字节保存互斥锁的持有者     Save priority of mutex's new owner       */
         pevent->OSEventCnt |= prio;
         pevent->OSEventPtr  = OSTCBPrioTbl[prio];     /*      Link to new mutex owner's OS_TCB         */
         if ((pcp  != OS_PRIO_MUTEX_CEIL_DIS) &&
@@ -647,7 +650,7 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
             return (OS_ERR_NONE);
         }
     }
-    pevent->OSEventCnt |= OS_MUTEX_AVAILABLE;         /* No,  Mutex is now available                   */
+    pevent->OSEventCnt |= OS_MUTEX_AVAILABLE;         /* 将互斥锁置为可用 No,  Mutex is now available                   */
     pevent->OSEventPtr  = (void *)0;
     OS_EXIT_CRITICAL();
     return (OS_ERR_NONE);

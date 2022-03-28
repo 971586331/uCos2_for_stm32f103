@@ -1052,6 +1052,7 @@ void  OS_Dummy (void)
 * Note       : This function is INTERNAL to uC/OS-II and your application should not call it.
 *********************************************************************************************************
 */
+// 将等待这个事件的优先级最高的任务置为就绪状态
 #if (OS_EVENT_EN)
 INT8U  OS_EventTaskRdy (OS_EVENT  *pevent,
                         void      *pmsg,

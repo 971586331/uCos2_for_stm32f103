@@ -97,14 +97,16 @@ void start_task(void *pdata)
 	OSTaskSuspend(START_TASK_PRIO); //挂起开始任务
 }
 
-OS_EVENT *sem1 = NULL;
+OS_EVENT *mutex = NULL;
+INT8U err = 0;
 
 //LED0任务
 void led0_task(void *pdata)
 {	 
     int count = 0;
+    OS_MUTEX_DATA data;
 
-    sem1 = OSSemCreate(0);
+    mutex = OSMutexCreate(0, &err);
 	while(1)
 	{
         count ++;
@@ -115,21 +117,21 @@ void led0_task(void *pdata)
             count = 0;
         }
         OSTimeDlyHMSM(0, 0, 1, 0);  // 锁调度器后delya不起作用
-        OSSemPost(sem1);
+        OSMutexPend(mutex, 100, &err);
+        OSMutexAccept(mutex, &err);
+        OSMutexPost(mutex);
+        OSMutexQuery(mutex, &data);
+        OSMutexDel(mutex, 0, &err);
 	};
 }
 
 //LED1任务
 void led1_task(void *pdata)
 {
-    INT8U err = 0;
     OS_SEM_DATA data;
 	while(1)
 	{
-        OSSemPend(sem1, 100, &err);
         printf("led1_task!\n");
         OSTimeDlyHMSM(0, 0, 0, 500);
-        OSSemDel(sem1, 0, &err);
-        OSSemQuery(sem1, &data);
 	}
 }

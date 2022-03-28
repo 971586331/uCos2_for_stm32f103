@@ -728,7 +728,7 @@ OS_EXT  BOOLEAN           OSSafetyCriticalStartFlag;
 OS_EXT  OS_STK            OSTaskIdleStk[OS_TASK_IDLE_STK_SIZE];      /* Idle task stack                */
 
 
-OS_EXT  OS_TCB           *OSTCBCur;                        /* Pointer to currently running TCB         */
+OS_EXT  OS_TCB           *OSTCBCur;                        /* 指向当前运行的 TCB 的指针 Pointer to currently running TCB         */
 OS_EXT  OS_TCB           *OSTCBFreeList;                   /* 向空闲 TCB 列表的指针 Pointer to list of free TCBs             */
 OS_EXT  OS_TCB           *OSTCBHighRdy;                    /* Pointer to highest priority TCB R-to-R   */
 OS_EXT  OS_TCB           *OSTCBList;                       /* 指向 TCB 的双向链表的指针 Pointer to doubly linked list of TCBs    */
