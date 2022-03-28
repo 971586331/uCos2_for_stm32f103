@@ -323,19 +323,20 @@ void  *OSMboxPend (OS_EVENT  *pevent,
     }
     OS_ENTER_CRITICAL();
     pmsg = pevent->OSEventPtr;
-    if (pmsg != (void *)0) {                          /* See if there is already a message             */
+    if (pmsg != (void *)0) {                          /* 如果消息不为空，说明以发送了消息，直接返回 See if there is already a message             */
         pevent->OSEventPtr = (void *)0;               /* Clear the mailbox                             */
         OS_EXIT_CRITICAL();
         *perr = OS_ERR_NONE;
         return (pmsg);                                /* Return the message received (or NULL)         */
     }
-    OSTCBCur->OSTCBStat     |= OS_STAT_MBOX;          /* Message not available, task will pend         */
+    OSTCBCur->OSTCBStat     |= OS_STAT_MBOX;          /* 任务因为消息邮箱挂起 Message not available, task will pend         */
     OSTCBCur->OSTCBStatPend  = OS_STAT_PEND_OK;
     OSTCBCur->OSTCBDly       = timeout;               /* Load timeout in TCB                           */
     OS_EventTaskWait(pevent);                         /* Suspend task until event or timeout occurs    */
     OS_EXIT_CRITICAL();
     OS_Sched();                                       /* Find next highest priority task ready to run  */
     OS_ENTER_CRITICAL();
+    // 运行到这里，说明消息已经收到了
     switch (OSTCBCur->OSTCBStatPend) {                /* See if we timed-out or aborted                */
         case OS_STAT_PEND_OK:
              pmsg =  OSTCBCur->OSTCBMsg;
@@ -476,7 +477,7 @@ INT8U  OSMboxPendAbort (OS_EVENT  *pevent,
 * Note(s)    : 1) HPT means Highest Priority Task
 *********************************************************************************************************
 */
-
+// 向消息邮箱发送消息
 #if OS_MBOX_POST_EN > 0u
 INT8U  OSMboxPost (OS_EVENT  *pevent,
                    void      *pmsg)
@@ -499,8 +500,8 @@ INT8U  OSMboxPost (OS_EVENT  *pevent,
         return (OS_ERR_EVENT_TYPE);
     }
     OS_ENTER_CRITICAL();
-    if (pevent->OSEventGrp != 0u) {                   /* See if any task pending on mailbox            */
-                                                      /* Ready HPT waiting on event                    */
+    if (pevent->OSEventGrp != 0u) {                   /* 如果有任务在等待这个事件 See if any task pending on mailbox            */
+                                                      /* 取出等待任务中优先级最高的置为就绪状态 Ready HPT waiting on event                    */
         (void)OS_EventTaskRdy(pevent, pmsg, OS_STAT_MBOX, OS_STAT_PEND_OK);
         OS_EXIT_CRITICAL();
         OS_Sched();                                   /* Find highest priority task ready to run       */
@@ -572,9 +573,9 @@ INT8U  OSMboxPostOpt (OS_EVENT  *pevent,
         return (OS_ERR_EVENT_TYPE);
     }
     OS_ENTER_CRITICAL();
-    if (pevent->OSEventGrp != 0u) {                   /* See if any task pending on mailbox            */
+    if (pevent->OSEventGrp != 0u) {                   /* 如果有任务在等待这个事件 See if any task pending on mailbox            */
         if ((opt & OS_POST_OPT_BROADCAST) != 0x00u) { /* Do we need to post msg to ALL waiting tasks ? */
-            while (pevent->OSEventGrp != 0u) {        /* Yes, Post to ALL tasks waiting on mailbox     */
+            while (pevent->OSEventGrp != 0u) {        /* 取出所有的等待任务全置为就绪状态 Yes, Post to ALL tasks waiting on mailbox     */
                 (void)OS_EventTaskRdy(pevent, pmsg, OS_STAT_MBOX, OS_STAT_PEND_OK);
             }
         } else {                                      /* No,  Post to HPT waiting on mbox              */

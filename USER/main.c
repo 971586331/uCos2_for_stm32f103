@@ -97,38 +97,34 @@ void start_task(void *pdata)
 	OSTaskSuspend(START_TASK_PRIO); //挂起开始任务
 }
 
-OS_EVENT *mutex = NULL;
+OS_EVENT *mbox = NULL;
 INT8U err = 0;
+char str[10] = "123";
 
 //LED0任务
 void led0_task(void *pdata)
 {	 
     int count = 0;
-    OS_MUTEX_DATA data;
+    OS_MBOX_DATA data;
 
-    mutex = OSMutexCreate(0, &err);
+    mbox = OSMboxCreate(str);
+    OSMboxPost(mbox, str);
+    OSMboxPostOpt(mbox, str, 0);
+    OSMboxPend(mbox, 100, &err);
+    OSMboxAccept(mbox);
+    OSMboxQuery(mbox, &data);
+    OSMboxDel(mbox, 0, &err);
 	while(1)
 	{
         count ++;
         printf("led0_task!\n");
-        if( count == 5 ) {
-        }
-        if( count == 10 ) {
-            count = 0;
-        }
         OSTimeDlyHMSM(0, 0, 1, 0);  // 锁调度器后delya不起作用
-        OSMutexPend(mutex, 100, &err);
-        OSMutexAccept(mutex, &err);
-        OSMutexPost(mutex);
-        OSMutexQuery(mutex, &data);
-        OSMutexDel(mutex, 0, &err);
 	};
 }
 
 //LED1任务
 void led1_task(void *pdata)
 {
-    OS_SEM_DATA data;
 	while(1)
 	{
         printf("led1_task!\n");
