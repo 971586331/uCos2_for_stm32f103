@@ -15,7 +15,7 @@
 
 //START 任务
 //设置任务优先级
-#define START_TASK_PRIO			10  ///开始任务的优先级为最低
+#define START_TASK_PRIO			0  ///开始任务的优先级为最低
 //设置任务堆栈大小
 #define START_STK_SIZE			128
 //任务任务堆栈
@@ -25,7 +25,7 @@ void start_task(void *pdata);
 
 //LED0任务
 //设置任务优先级
-#define LED0_TASK_PRIO			7
+#define LED0_TASK_PRIO			3
 //设置任务堆栈大小
 #define LED0_STK_SIZE			128
 //任务堆栈
@@ -35,13 +35,16 @@ void led0_task(void *pdata);
 
 //LED1任务
 //设置任务优先级
-#define LED1_TASK_PRIO			6
+#define LED1_TASK_PRIO			4
 //设置任务堆栈大小
 #define LED1_STK_SIZE			128
 //任务堆栈
 OS_STK LED1_TASK_STK[LED1_STK_SIZE];
 //任务函数
 void led1_task(void *pdata);
+
+OS_EVENT *str_q;
+void *MsgGrp[128];
 
 int main(void)
 { 
@@ -67,10 +70,13 @@ int main(void)
 //开始任务
 void start_task(void *pdata)
 {
+    INT8U err;
 	OS_CPU_SR cpu_sr=0;
 	pdata=pdata;
 	OSStatInit();  //开启统计任务
 	
+    str_q = OSQCreate(MsgGrp, 128);
+
 	OS_ENTER_CRITICAL();  //进入临界区(关闭中断)
     //LED0任务
     OSTaskCreateExt((void(*)(void*) )led0_task,                 
@@ -94,30 +100,39 @@ void start_task(void *pdata)
                     (INT16U         )OS_TASK_OPT_STK_CHK|OS_TASK_OPT_STK_CLR|OS_TASK_OPT_SAVE_FP);
 
     OS_EXIT_CRITICAL();             //退出临界区(开中断)
-	OSTaskSuspend(START_TASK_PRIO); //挂起开始任务
-}
+	// OSTaskSuspend(START_TASK_PRIO); //挂起开始任务
 
-OS_EVENT *mbox = NULL;
-INT8U err = 0;
-char str[10] = "123";
+    static char *s1 = "aaa";
+    OSQPostFront(str_q, s1);
+    OSQPost(str_q, s1);
+    OSQFlush(str_q);
+    OSQDel(str_q, 0, &err);
+    while (1)
+    {
+        if( OSTimeGet() > 100 && OSTimeGet() < 200 ) {
+            static char *s2 = "bbb";
+            OSQPostFront(str_q, s2);
+            static char *s3 = "ccc";
+            OSQPostFront(str_q, s3);
+        }
+
+        if( OSTimeGet() > 500 && OSTimeGet() < 1000 ) {
+            static char *s4 = "ddd";
+            OSQPostFront(str_q, s4);
+            break;
+        }
+    }
+    
+}
 
 //LED0任务
 void led0_task(void *pdata)
-{	 
-    int count = 0;
-    OS_MBOX_DATA data;
-
-    mbox = OSMboxCreate(str);
-    OSMboxPost(mbox, str);
-    OSMboxPostOpt(mbox, str, 0);
-    OSMboxPend(mbox, 100, &err);
-    OSMboxAccept(mbox);
-    OSMboxQuery(mbox, &data);
-    OSMboxDel(mbox, 0, &err);
+{
+    INT8U err;
 	while(1)
 	{
-        count ++;
-        printf("led0_task!\n");
+        char *ss = OSQPend(str_q, 0, &err);
+        printf("led0 = %s\n", ss);
         OSTimeDlyHMSM(0, 0, 1, 0);  // 锁调度器后delya不起作用
 	};
 }
@@ -125,9 +140,11 @@ void led0_task(void *pdata)
 //LED1任务
 void led1_task(void *pdata)
 {
+    INT8U err;
 	while(1)
 	{
-        printf("led1_task!\n");
-        OSTimeDlyHMSM(0, 0, 0, 500);
+        char *ss = OSQPend(str_q, 0, &err);
+        printf("led1 = %s\n", ss);
+        OSTimeDlyHMSM(0, 0, 1, 0);
 	}
 }

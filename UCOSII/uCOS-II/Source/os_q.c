@@ -147,16 +147,16 @@ OS_EVENT  *OSQCreate (void    **start,
         return ((OS_EVENT *)0);                  /* ... can't CREATE from an ISR                       */
     }
     OS_ENTER_CRITICAL();
-    pevent = OSEventFreeList;                    /* Get next free event control block                  */
+    pevent = OSEventFreeList;                    /* 获得一个事件控制块 Get next free event control block                  */
     if (OSEventFreeList != (OS_EVENT *)0) {      /* See if pool of free ECB pool was empty             */
         OSEventFreeList = (OS_EVENT *)OSEventFreeList->OSEventPtr;
     }
     OS_EXIT_CRITICAL();
     if (pevent != (OS_EVENT *)0) {               /* See if we have an event control block              */
         OS_ENTER_CRITICAL();
-        pq = OSQFreeList;                        /* Get a free queue control block                     */
+        pq = OSQFreeList;                        /* 获得一个消息队列控制块 Get a free queue control block                     */
         if (pq != (OS_Q *)0) {                   /* Were we able to get a queue control block ?        */
-            OSQFreeList            = OSQFreeList->OSQPtr; /* Yes, Adjust free list pointer to next free*/
+            OSQFreeList            = OSQFreeList->OSQPtr; /* 把空闲指针向后移 Yes, Adjust free list pointer to next free*/
             OS_EXIT_CRITICAL();
             pq->OSQStart           = start;               /*      Initialize the queue                 */
             pq->OSQEnd             = &start[size];
@@ -172,7 +172,7 @@ OS_EVENT  *OSQCreate (void    **start,
 #endif
             OS_EventWaitListInit(pevent);                 /*      Initialize the wait list             */
         } else {
-            pevent->OSEventPtr = (void *)OSEventFreeList; /* No,  Return event control block on error  */
+            pevent->OSEventPtr = (void *)OSEventFreeList; /* 否，出错时返回事件控制块 No,  Return event control block on error  */
             OSEventFreeList    = pevent;
             OS_EXIT_CRITICAL();
             pevent = (OS_EVENT *)0;
@@ -443,9 +443,9 @@ void  *OSQPend (OS_EVENT  *pevent,
         return ((void *)0);
     }
     OS_ENTER_CRITICAL();
-    pq = (OS_Q *)pevent->OSEventPtr;             /* Point at queue control block                       */
-    if (pq->OSQEntries > 0u) {                   /* See if any messages in the queue                   */
-        pmsg = *pq->OSQOut++;                    /* Yes, extract oldest message from the queue         */
+    pq = (OS_Q *)pevent->OSEventPtr;             /* 取出队列控制块 Point at queue control block                       */
+    if (pq->OSQEntries > 0u) {                   /* 如果队列中有消息 See if any messages in the queue                   */
+        pmsg = *pq->OSQOut++;                    /* 从队尾取出数据 Yes, extract oldest message from the queue         */
         pq->OSQEntries--;                        /* Update the number of entries in the queue          */
         if (pq->OSQOut == pq->OSQEnd) {          /* Wrap OUT pointer if we are at the end of the queue */
             pq->OSQOut = pq->OSQStart;
@@ -454,13 +454,14 @@ void  *OSQPend (OS_EVENT  *pevent,
         *perr = OS_ERR_NONE;
         return (pmsg);                           /* Return message received                            */
     }
-    OSTCBCur->OSTCBStat     |= OS_STAT_Q;        /* Task will have to pend for a message to be posted  */
+    OSTCBCur->OSTCBStat     |= OS_STAT_Q;        /* 任务必须等待才能发布消息 Task will have to pend for a message to be posted  */
     OSTCBCur->OSTCBStatPend  = OS_STAT_PEND_OK;
     OSTCBCur->OSTCBDly       = timeout;          /* Load timeout into TCB                              */
     OS_EventTaskWait(pevent);                    /* Suspend task until event or timeout occurs         */
     OS_EXIT_CRITICAL();
     OS_Sched();                                  /* Find next highest priority task ready to run       */
     OS_ENTER_CRITICAL();
+    // 运行到这里说胆已经等到了消息
     switch (OSTCBCur->OSTCBStatPend) {                /* See if we timed-out or aborted                */
         case OS_STAT_PEND_OK:                         /* Extract message from TCB (Put there by QPost) */
              pmsg =  OSTCBCur->OSTCBMsg;
@@ -631,7 +632,7 @@ INT8U  OSQPost (OS_EVENT  *pevent,
         OS_EXIT_CRITICAL();
         return (OS_ERR_Q_FULL);
     }
-    *pq->OSQIn++ = pmsg;                               /* Insert message into queue                    */
+    *pq->OSQIn++ = pmsg;                               /* 插到队列头 Insert message into queue                    */
     pq->OSQEntries++;                                  /* Update the nbr of entries in the queue       */
     if (pq->OSQIn == pq->OSQEnd) {                     /* Wrap IN ptr if we are at end of queue        */
         pq->OSQIn = pq->OSQStart;
@@ -648,7 +649,7 @@ INT8U  OSQPost (OS_EVENT  *pevent,
 * Description: This function sends a message to a queue but unlike OSQPost(), the message is posted at
 *              the front instead of the end of the queue.  Using OSQPostFront() allows you to send
 *              'priority' messages.
-*
+*   此函数将消息发送到队列，但与OSQPost()不同的是，消息被发送到队列的前端而不是队列的末尾。使用OSQPostFront()允许您发送“优先”消息。
 * Arguments  : pevent        is a pointer to the event control block associated with the desired queue
 *
 *              pmsg          is a pointer to the message to send.
@@ -682,15 +683,16 @@ INT8U  OSQPostFront (OS_EVENT  *pevent,
         return (OS_ERR_EVENT_TYPE);
     }
     OS_ENTER_CRITICAL();
-    if (pevent->OSEventGrp != 0u) {                   /* See if any task pending on queue              */
+    if (pevent->OSEventGrp != 0u) {                   /* 说明有任务正在等待这个事件 See if any task pending on queue              */
                                                       /* Ready highest priority task waiting on event  */
         (void)OS_EventTaskRdy(pevent, pmsg, OS_STAT_Q, OS_STAT_PEND_OK);
         OS_EXIT_CRITICAL();
         OS_Sched();                                   /* Find highest priority task ready to run       */
         return (OS_ERR_NONE);
     }
-    pq = (OS_Q *)pevent->OSEventPtr;                  /* Point to queue control block                  */
-    if (pq->OSQEntries >= pq->OSQSize) {              /* Make sure queue is not full                   */
+    // 如果没有任务正在等待这个事件，则把消息放到队列中
+    pq = (OS_Q *)pevent->OSEventPtr;                  /* 指向队列控制块 Point to queue control block                  */
+    if (pq->OSQEntries >= pq->OSQSize) {              /* 队列满了 Make sure queue is not full                   */
         OS_EXIT_CRITICAL();
         return (OS_ERR_Q_FULL);
     }
@@ -698,7 +700,7 @@ INT8U  OSQPostFront (OS_EVENT  *pevent,
         pq->OSQOut = pq->OSQEnd;
     }
     pq->OSQOut--;
-    *pq->OSQOut = pmsg;                               /* Insert message into queue                     */
+    *pq->OSQOut = pmsg;                               /* 插到队列尾 Insert message into queue                     */
     pq->OSQEntries++;                                 /* Update the nbr of entries in the queue        */
     OS_EXIT_CRITICAL();
     return (OS_ERR_NONE);

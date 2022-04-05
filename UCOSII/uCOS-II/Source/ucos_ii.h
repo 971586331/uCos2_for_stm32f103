@@ -502,13 +502,13 @@ typedef struct os_mutex_data {
 
 #if OS_Q_EN > 0u
 typedef struct os_q {                       /* QUEUE CONTROL BLOCK                                     */
-    struct os_q   *OSQPtr;                  /* Link to next queue control block in list of free blocks */
-    void         **OSQStart;                /* Ptr to start of queue data                              */
-    void         **OSQEnd;                  /* Ptr to end   of queue data                              */
-    void         **OSQIn;                   /* Ptr to where next message will be inserted  in   the Q  */
-    void         **OSQOut;                  /* Ptr to where next message will be extracted from the Q  */
-    INT16U         OSQSize;                 /* Size of queue (maximum number of entries)               */
-    INT16U         OSQEntries;              /* Current number of entries in the queue                  */
+    struct os_q   *OSQPtr;                  /* 指向下一个队列控制块 Link to next queue control block in list of free blocks */
+    void         **OSQStart;                /* 队列的开始 Ptr to start of queue data                              */
+    void         **OSQEnd;                  /* 队列的结束 Ptr to end   of queue data                              */
+    void         **OSQIn;                   /* 插入消息的位置 Ptr to where next message will be inserted  in   the Q  */
+    void         **OSQOut;                  /* 取出消息的位置 Ptr to where next message will be extracted from the Q  */
+    INT16U         OSQSize;                 /* 队列的大小 Size of queue (maximum number of entries)               */
+    INT16U         OSQEntries;              /* 已存放消息的个数 Current number of entries in the queue                  */
 } OS_Q;
 
 
@@ -745,8 +745,8 @@ OS_EXT  OS_MEM            OSMemTbl[OS_MAX_MEM_PART];/* Storage for memory partit
 #endif
 
 #if (OS_Q_EN > 0u) && (OS_MAX_QS > 0u)
-OS_EXT  OS_Q             *OSQFreeList;              /* Pointer to list of free QUEUE control blocks    */
-OS_EXT  OS_Q              OSQTbl[OS_MAX_QS];        /* Table of QUEUE control blocks                   */
+OS_EXT  OS_Q             *OSQFreeList;              /* 指向空闲队列控制块列表的指针 Pointer to list of free QUEUE control blocks    */
+OS_EXT  OS_Q              OSQTbl[OS_MAX_QS];        /* 消息队列控制块 Table of QUEUE control blocks                   */
 #endif
 
 #if OS_TASK_REG_TBL_SIZE > 0u
